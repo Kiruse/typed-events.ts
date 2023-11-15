@@ -1,6 +1,6 @@
 {
   "name": "@kiruse/typed-events",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Alternate event system designed for TypeScript",
   "main": "dist/index.js",
   "repository": "https://github.com/kiruse/typed-events.ts",

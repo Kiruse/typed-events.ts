@@ -51,6 +51,16 @@ export default function Event<Args = void, Result = void>() {
     return unregister;
   }
 
+  /** Promise-wrapper around `.once`. */
+  register.async = () => new Promise((resolve) => {
+    register.once(({ args }) => resolve(args));
+  });
+
+  /** Promise-wrapper around `.oncePred`. */
+  register.asyncPred = (pred: (e: EventInstance<Args, Result>) => boolean) => new Promise((resolve) => {
+    register.oncePred(({ args }) => resolve(args), pred);
+  });
+
   /** Emit an event. */
   register.emit = (async (args: Args, result?: Result) => {
     const event: EventInstance<Args, Result> = {

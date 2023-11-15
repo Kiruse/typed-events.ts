@@ -105,3 +105,18 @@ test('Typed Event: oncePred async', async () => {
   await event.emit('foo');
   expect(counter).toBe(1);
 });
+
+test('Typed Event: async', async () => {
+  const event = Event<string>();
+  const promise = event.async();
+  event.emit('foo');
+  expect(await promise).toBe('foo');
+});
+
+test('Typed Event: asyncPred', async () => {
+  const event = Event<string>();
+  const promise = event.asyncPred(e => !!e.args.match(/^[A-Z]/));
+  event.emit('foo');
+  event.emit('Bar');
+  expect(await promise).toBe('Bar');
+});
