@@ -20,7 +20,7 @@ export type EventEmitter<Args, Result> =
       (args: Args, result?: Result): Promise<EventInstance<Args, Result>>;
     };
 
-export default function Event<Args = void, Result = void>() {
+export function Event<Args = void, Result = void>() {
   const handlers = new Set<EventHandler<Args, Result>>();
 
   /** Register a new event handler to be called whenever an event is emitted. Returns its own unregistering function. */
@@ -77,3 +77,6 @@ export default function Event<Args = void, Result = void>() {
 
   return register;
 }
+
+export type Event<Args = void, Result = void> = ReturnType<typeof Event<Args, Result>>;
+export default Event;

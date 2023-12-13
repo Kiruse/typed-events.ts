@@ -1,13 +1,13 @@
 {
   "name": "@kiruse/typed-events",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Alternate event system designed for TypeScript",
   "main": "dist/index.js",
   "repository": "https://github.com/kiruse/typed-events.ts",
   "author": "Kiruse",
   "license": "MIT",
   "scripts": {
-    "prepack": "rm -rf dist/ && yarn run build",
+    "prepack": "./build.sh",
     "build": "tsc",
     "test": "jest"
   },
@@ -15,6 +15,7 @@
     "@types/jest": "^29.5.6",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "uglify-js": "^3.17.4"
   }
 }
