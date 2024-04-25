@@ -51,6 +51,27 @@ export function Event<Args = void, Result = void>() {
     return unregister;
   }
 
+  register.expect = (pred: (e: EventInstance<Args, Result>) => boolean, timeout = Infinity) =>
+    new Promise<EventInstance<Args, Result>>((resolve, reject) => {
+      let done = false;
+      const unregister = register(async (e) => {
+        if (pred(e) && !done) {
+          done = true;
+          unregister();
+          resolve(e);
+        }
+      });
+      if (timeout !== Infinity) {
+        setTimeout(() => {
+          if (!done) {
+            done = true;
+            unregister();
+            reject(new Error('Event.expect timed out'));
+          }
+        }, timeout);
+      }
+    });
+
   /** Promise-wrapper around `.once`. */
   register.async = () => new Promise((resolve) => {
     register.once(({ args }) => resolve(args));

@@ -106,6 +106,17 @@ test('Typed Event: oncePred async', async () => {
   expect(counter).toBe(1);
 });
 
+test('Typed Event: expect', async () => {
+  const event = Event();
+  expect(() => event.expect(() => true)).toBeTruthy();
+  event.emit();
+});
+
+test('Typed Event: expect timeout', async () => {
+  const event = Event();
+  expect(() => event.expect(() => false, 10)).rejects.toThrow('Event.expect timed out');
+});
+
 test('Typed Event: async', async () => {
   const event = Event<string>();
   const promise = event.async();
