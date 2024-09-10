@@ -10,17 +10,17 @@ $ npm install @kiruse/typed-events
 
 ## Usage
 ```typescript
-import Event from '@kiruse/typed-events';
+import { Event } from '@kiruse/typed-events';
 
 // First generic parameter is the `event.args` field, second is the optional `event.result` field.
 const event = Event<{ foo: string }, number>();
 
-const unsub = event(e => {
-  console.log(e.args);
+const unsub = event((e, args) => {
+  console.log(args);
   e.result ??= 42;
   e.result++;
 });
-event.once(e => {
+event.once((e) => {
   e.result ??= 42;
   e.result /= 2;
 });
@@ -29,3 +29,5 @@ const e = await event.emit({ foo: 'bar' });
 console.log(e.result); // 21.5
 unsub();
 ```
+
+**Note:** Both `AsyncEvent` and `SyncEvent` exist, with `AsyncEvent` being an alias of `Event`. The only difference between the two is that `SyncEvent` prohibits the use of asynchronous handlers, `emit` does not return a promise & returns the event directly, and has corresponding typing.

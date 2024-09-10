@@ -1,30 +1,53 @@
 // License: MIT
 export type Empty = {}
 
-export interface EventInstance<Args, Result> {
-  readonly event: ReturnType<typeof Event<Args, Result>>;
+export interface EventInstance<Args, Result, IsAsync extends boolean> {
+  readonly event: Event<Args, Result, IsAsync>;
   readonly args: Args;
   result: Result | undefined;
   canceled: boolean;
 }
 
-export type EventHandler<Args, Result> = (e: EventInstance<Args, Result>) => void | Promise<void>;
+type TogglePromise<T, IsAsync extends boolean> = IsAsync extends true ? Promise<T> : T;
 
-export type EventEmitter<Args, Result> =
+export type EventHandler<Args, Result, IsAsync extends boolean = true> = (e: EventInstance<Args, Result, IsAsync>, args: Args) => void | TogglePromise<void, IsAsync>;
+
+export type EventEmitter<Args, Result, IsAsync extends boolean = true> =
   void extends Args
   ? {
-      (_?: any): Promise<EventInstance<Args, Result>>;
-      (_: any, result: Result): Promise<EventInstance<Args, Result>>;
+      (_?: any): TogglePromise<EventInstance<Args, Result, IsAsync>, IsAsync>;
+      (_: any, result: Result): TogglePromise<EventInstance<Args, Result, IsAsync>, IsAsync>;
     }
   : {
-      (args: Args, result?: Result): Promise<EventInstance<Args, Result>>;
+      (args: Args, result?: Result): TogglePromise<EventInstance<Args, Result, IsAsync>, IsAsync>;
     };
 
-export function Event<Args = void, Result = void>() {
-  const handlers = new Set<EventHandler<Args, Result>>();
+export type Unsub = () => void;
+export type EventPredicate<Args, Result, IsAsync extends boolean = true> = (e: EventInstance<Args, Result, IsAsync>, args: Args) => boolean;
+
+export type Event<Args = void, Result = void, IsAsync extends boolean = true> = {
+  (handler: EventHandler<Args, Result, IsAsync>): Unsub;
+  once: (handler: EventHandler<Args, Result, IsAsync>) => Unsub;
+  oncePred: (handler: EventHandler<Args, Result, IsAsync>, pred: (e: EventInstance<Args, Result, IsAsync>) => boolean) => Unsub;
+  /** Wait for the next event matching the given predicate to be emitted, with an optional timeout. */
+  expect: (pred: (e: EventInstance<Args, Result, IsAsync>) => boolean, timeout?: number) => Promise<EventInstance<Args, Result, IsAsync>>;
+  emit: EventEmitter<Args, Result, IsAsync>;
+  /** @deprecated Variant of `.wait` that resolves to only the event arguments. */
+  async: () => Promise<Args>;
+  /** @deprecated Variant of `.expect` that resolves to only the event arguments. */
+  asyncPred: (pred: (e: EventInstance<Args, Result, IsAsync>) => boolean) => Promise<Args>;
+  /** Wait for the next event to be emitted, with an optional timeout. */
+  wait: (timeout?: number) => Promise<EventInstance<Args, Result, IsAsync>>;
+}
+
+export type AsyncEvent<Args = void, Result = void> = Event<Args, Result, true>;
+export type SyncEvent<Args = void, Result = void> = Event<Args, Result, false>;
+
+function event<Args = void, Result = void, IsAsync extends boolean = boolean>(isAsync: IsAsync): Event<Args, Result, IsAsync> {
+  const handlers = new Set<EventHandler<Args, Result, IsAsync>>();
 
   /** Register a new event handler to be called whenever an event is emitted. Returns its own unregistering function. */
-  const register = (handler: EventHandler<Args, Result>) => {
+  const register: Event<Args, Result, IsAsync> = (handler: EventHandler<Args, Result, IsAsync>) => {
     handlers.add(handler);
     return () => {
       handlers.delete(handler);
@@ -32,29 +55,29 @@ export function Event<Args = void, Result = void>() {
   }
 
   /** Execute the given `handler` exactly once upon the next emitted event. */
-  register.once = (handler: EventHandler<Args, Result>) => {
-    const unregister = register(async (e) => {
+  register.once = (handler: EventHandler<Args, Result, IsAsync>) => {
+    const unregister = register((e) => {
       unregister();
-      await handler(e);
+      return handler(e, e.args);
     });
     return unregister;
   }
 
   /** Execute the given `handler` exactly once, but only if the event matches the given `pred`. */
-  register.oncePred = (handler: EventHandler<Args, Result>, pred: (e: EventInstance<Args, Result>) => boolean) => {
-    const unregister = register(async (e) => {
+  register.oncePred = (handler: EventHandler<Args, Result, IsAsync>, pred: (e: EventInstance<Args, Result, IsAsync>) => boolean) => {
+    const unregister = register((e) => {
       if (pred(e)) {
         unregister();
-        await handler(e);
+        return handler(e, e.args);
       }
     });
     return unregister;
   }
 
-  register.expect = (pred: (e: EventInstance<Args, Result>) => boolean, timeout = Infinity) =>
-    new Promise<EventInstance<Args, Result>>((resolve, reject) => {
+  register.expect = (pred: (e: EventInstance<Args, Result, IsAsync>) => boolean, timeout = Infinity) =>
+    new Promise<EventInstance<Args, Result, IsAsync>>((resolve, reject) => {
       let done = false;
-      const unregister = register(async (e) => {
+      const unregister = register((e) => {
         if (pred(e) && !done) {
           done = true;
           unregister();
@@ -72,32 +95,33 @@ export function Event<Args = void, Result = void>() {
       }
     });
 
-  /** Promise-wrapper around `.once`. */
-  register.async = () => new Promise((resolve) => {
-    register.once(({ args }) => resolve(args));
-  });
+  register.wait = (timeout?: number) => register.expect((e) => true, timeout);
 
-  /** Promise-wrapper around `.oncePred`. */
-  register.asyncPred = (pred: (e: EventInstance<Args, Result>) => boolean) => new Promise((resolve) => {
-    register.oncePred(({ args }) => resolve(args), pred);
-  });
+  register.async = (timeout?: number) => register.expect((e) => true, timeout).then(e => e.args);
+  register.asyncPred = (pred: (e: EventInstance<Args, Result, IsAsync>) => boolean, timeout?: number) => register.expect((e) => pred(e), timeout).then(e => e.args);
 
   /** Emit an event. */
-  register.emit = (async (args: Args, result?: Result) => {
-    const event: EventInstance<Args, Result> = {
+  register.emit = ((args: Args, result?: Result) => {
+    const event: EventInstance<Args, Result, IsAsync> = {
       event: register,
       args,
       result,
       canceled: false,
     };
+
+    const results: any[] = [];
     for (const handler of handlers) {
-      await handler(event);
+      results.push(handler(event, args));
     }
-    return event;
-  }) as EventEmitter<Args, Result>;
+
+    return isAsync ? Promise.all(results).then(() => event) : event;
+  }) as EventEmitter<Args, Result, IsAsync>;
 
   return register;
 }
 
-export type Event<Args = void, Result = void> = ReturnType<typeof Event<Args, Result>>;
+export const AsyncEvent = <Args = void, Result = void>() => event<Args, Result, true>(true);
+export const SyncEvent = <Args = void, Result = void>() => event<Args, Result, false>(false);
+export const Event = AsyncEvent;
+
 export default Event;
