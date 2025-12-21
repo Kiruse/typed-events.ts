@@ -26,6 +26,11 @@ export type Unsub = () => void;
 export type EventPredicate<Args, Result, IsAsync extends boolean = true> = (e: EventInstance<Args, Result, IsAsync>, args: Args) => boolean;
 
 export type Event<Args = void, Result = void, IsAsync extends boolean = true> = {
+  /** Virtual field denoting the event's arguments type. Doesn't actually hold any value. */
+  readonly '__TypedEvent__Args': Args;
+  /** Virtual field denoting the event's result type. Doesn't actually hold any value. */
+  readonly '__TypedEvent__Result': Result;
+
   (handler: EventHandler<Args, Result, IsAsync>): Unsub;
   once: (handler: EventHandler<Args, Result, IsAsync>) => Unsub;
   oncePred: (handler: EventHandler<Args, Result, IsAsync>, pred: (e: EventInstance<Args, Result, IsAsync>) => boolean) => Unsub;
@@ -42,17 +47,19 @@ export type Event<Args = void, Result = void, IsAsync extends boolean = true> = 
 
 export type AsyncEvent<Args = void, Result = void> = Event<Args, Result, true>;
 export type SyncEvent<Args = void, Result = void> = Event<Args, Result, false>;
+export type EventArgs<T extends Event<any, any, any>> = T['__TypedEvent__Args'];
+export type EventResult<T extends Event<any, any, any>> = T['__TypedEvent__Result'];
 
 function event<Args = void, Result = void, IsAsync extends boolean = boolean>(isAsync: IsAsync): Event<Args, Result, IsAsync> {
   const handlers = new Set<EventHandler<Args, Result, IsAsync>>();
 
   /** Register a new event handler to be called whenever an event is emitted. Returns its own unregistering function. */
-  const register: Event<Args, Result, IsAsync> = (handler: EventHandler<Args, Result, IsAsync>) => {
+  const register = ((handler: EventHandler<Args, Result, IsAsync>) => {
     handlers.add(handler);
     return () => {
       handlers.delete(handler);
     }
-  }
+  }) as Event<Args, Result, IsAsync>;
 
   /** Execute the given `handler` exactly once upon the next emitted event. */
   register.once = (handler: EventHandler<Args, Result, IsAsync>) => {
