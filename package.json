@@ -1,14 +1,17 @@
 {
   "name": "@kiruse/typed-events",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Alternate event system designed for TypeScript",
   "main": "dist/index.min.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/kiruse/typed-events.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiruse/typed-events.ts.git"
+  },
   "author": "Kiruse",
   "license": "MIT",
   "scripts": {
-    "prepack": "./build.sh",
+    "prepare": "npm run build",
     "build": "tsc && npx uglifyjs dist/index.js -o dist/index.min.js",
     "test": "jest"
   },
