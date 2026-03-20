@@ -2,7 +2,7 @@ name: Publish to NPM and GitHub Packages
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
