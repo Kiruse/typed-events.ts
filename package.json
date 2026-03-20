@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kiruse/typed-events.ts.git"
+    "url": "git+https://github.com/Kiruse/typed-events.ts.git"
   },
   "author": "Kiruse",
   "license": "MIT",
