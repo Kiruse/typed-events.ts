@@ -1,6 +1,7 @@
+.github/
+!dist
 node_modules/
 src/
 test/
-jest.config.js
+bun.lock
 tsconfig.json
-yarn.lock

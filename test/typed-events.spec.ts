@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'bun:test';
 import { Event, SyncEvent } from '../src/index';
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
